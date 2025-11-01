@@ -13,6 +13,9 @@ class Note {
   DateTime createdAt; // 创建时间
   DateTime updatedAt; // 修改时间
 
+  // 为 ExportNotesPage 添加 'word' 属性，它直接映射到 'summary'
+  String get word => summary;
+
   Note({
     required this.id,
     required this.title,
@@ -79,5 +82,3 @@ class Note {
     );
   }
 }
-
-

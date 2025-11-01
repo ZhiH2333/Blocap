@@ -19,12 +19,17 @@ dependencies:
   # 统计页图表与日历
   fl_chart: ^0.69.0
   table_calendar: ^3.1.0
-
+  # 分享（用于导出后弹出分享对话框）
+  share_plus: ^6.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+
+# 强制覆盖有问题的 win32 包版本
+dependency_overrides:
+  win32: ^5.0.0
 
 flutter:
   uses-material-design: true
