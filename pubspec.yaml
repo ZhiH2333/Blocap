@@ -10,6 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Flutter framework localizations
+  flutter_localizations:
+    sdk: flutter
   # Markdown 预览
   flutter_markdown: ^0.7.3+1
   # 本地文件目录
@@ -35,6 +38,7 @@ dependency_overrides:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     # 可放置默认背景图（留空即可，运行不报错）
     - assets/

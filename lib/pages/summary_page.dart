@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../models/note.dart';
+import '../l10n/app_localizations.dart';
 
 class SummaryPage extends StatefulWidget {
   final List<Note> notes;
@@ -54,7 +55,7 @@ class _SummaryPageState extends State<SummaryPage> {
     final monthlyCounts = _calculateMonthlyNoteCounts();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Summary'),
+        title: Text(AppLocalizations.of(context)!.summary),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -104,9 +105,11 @@ class _SummaryPageState extends State<SummaryPage> {
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-                Text('Notes', style: Theme.of(context).textTheme.titleMedium),
+                Text(AppLocalizations.of(context)!.notes,
+                    style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
-                Text('This year', style: Theme.of(context).textTheme.bodySmall),
+                Text(AppLocalizations.of(context)!.this_year,
+                    style: Theme.of(context).textTheme.bodySmall),
               ]),
               const SizedBox(width: 20),
               Expanded(
@@ -141,23 +144,42 @@ class _SummaryPageState extends State<SummaryPage> {
               showTitles: true,
               reservedSize: 16,
               getTitlesWidget: (value, meta) {
-                const monthInitials = [
-                  'J',
-                  'F',
-                  'M',
-                  'A',
-                  'M',
-                  'J',
-                  'J',
-                  'A',
-                  'S',
-                  'O',
-                  'N',
-                  'D'
-                ];
+                // Show single-character month labels for Chinese (一 二 三 ...),
+                // otherwise use intl.DateFormat.MMM for locale-aware short names.
                 final idx = value.toInt();
                 if (idx < 1 || idx > 12) return const SizedBox.shrink();
-                return Text(monthInitials[idx - 1],
+                final localeObj = Localizations.localeOf(context);
+                final lang = localeObj.languageCode;
+                String label;
+                if (lang == 'zh') {
+                  // Use single Chinese numerals instead of "1月" etc.
+                  const chineseNumerals = [
+                    '一',
+                    '二',
+                    '三',
+                    '四',
+                    '五',
+                    '六',
+                    '七',
+                    '八',
+                    '九',
+                    '十',
+                    '十一',
+                    '十二'
+                  ];
+                  label = chineseNumerals[idx - 1];
+                } else {
+                  // For non-Chinese locales, use the concise month initials
+                  // defined in ARB (e.g. "J,F,M,..."). This ensures short
+                  // single-letter labels as requested.
+                  final raw = AppLocalizations.of(context)!.month_initials;
+                  final monthInitials =
+                      raw.split(',').map((s) => s.trim()).toList();
+                  label = (idx - 1) < monthInitials.length
+                      ? monthInitials[idx - 1]
+                      : idx.toString();
+                }
+                return Text(label,
                     style: Theme.of(context).textTheme.bodySmall);
               },
             ),
@@ -212,6 +234,7 @@ class _SummaryPageState extends State<SummaryPage> {
                 _filterNotesForFocusedYear();
               });
             },
+            locale: Localizations.localeOf(context).toString(),
             headerStyle: HeaderStyle(
               titleTextFormatter: (date, locale) =>
                   DateFormat.yMMMM(locale).format(date),
@@ -221,13 +244,31 @@ class _SummaryPageState extends State<SummaryPage> {
               rightChevronIcon: const Icon(Icons.chevron_right),
             ),
             calendarBuilders: CalendarBuilders(
+              dowBuilder: (context, day) {
+                // Localize weekday labels (Mon/Tue or 周一/周二)
+                final locale = Localizations.localeOf(context).toString();
+                String label;
+                try {
+                  label = DateFormat.E(locale).format(day);
+                } catch (_) {
+                  // Fallback to English short name
+                  label = DateFormat.E('en').format(day);
+                }
+                return Center(
+                  child: Text(label,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(fontWeight: FontWeight.w600)),
+                );
+              },
               markerBuilder: (context, day, events) {
                 if (events.isNotEmpty) {
-                  return Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 5,
-                    child: Center(
+                  // Place a small dot below the day number without overlapping.
+                  return Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 6.0),
                       child: Container(
                         width: 6,
                         height: 6,

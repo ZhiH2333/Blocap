@@ -8,6 +8,8 @@ import 'services/storage_service.dart';
 import 'pages/note_reader_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/summary_page.dart';
+import 'l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 // 入口：Material 3 + 路由
 void main() async {
@@ -17,14 +19,42 @@ void main() async {
   runApp(const CapsuleApp());
 }
 
-class CapsuleApp extends StatelessWidget {
+class CapsuleApp extends StatefulWidget {
   const CapsuleApp({super.key});
+
+  @override
+  State<CapsuleApp> createState() => _CapsuleAppState();
+}
+
+class _CapsuleAppState extends State<CapsuleApp> {
+  Locale? _locale;
+
+  @override
+  void initState() {
+    super.initState();
+    final code = StorageService.instance.localeCode;
+    if (code != null && code.isNotEmpty) {
+      _locale = Locale(code);
+    }
+  }
+
+  void _setLocale(Locale? locale) {
+    setState(() => _locale = locale);
+  }
 
   @override
   Widget build(BuildContext context) {
     final storage = StorageService.instance;
     return MaterialApp(
       title: 'Capsule',
+      locale: _locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.teal,
@@ -34,15 +64,24 @@ class CapsuleApp extends StatelessWidget {
               displayColor: Colors.black87,
             ),
       ),
-      home: HomePage(storage: storage),
+      home: HomePage(
+          storage: storage,
+          onLocaleChanged: _setLocale,
+          currentLocale: _locale),
     );
   }
 }
 
 // 首页：列表 + 抽屉筛选 + 搜索 + 新建
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.storage});
+  const HomePage(
+      {super.key,
+      required this.storage,
+      this.onLocaleChanged,
+      this.currentLocale});
   final StorageService storage;
+  final void Function(Locale?)? onLocaleChanged;
+  final Locale? currentLocale;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -56,6 +95,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final notes = widget.storage.getNotes(status: _status, keyword: _keyword);
     final bgPath = widget.storage.bgPath;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         leading: Builder(
@@ -65,7 +105,7 @@ class _HomePageState extends State<HomePage> {
             onPressed: () => Scaffold.of(ctx).openDrawer(),
           ),
         ),
-        title: Text('Capsule (${notes.length})',
+        title: Text('${l10n.capsule} (${notes.length})',
             style: Theme.of(context)
                 .textTheme
                 .titleLarge
@@ -88,7 +128,11 @@ class _HomePageState extends State<HomePage> {
             onPressed: () async {
               final allNotes = widget.storage.getNotes(status: 'all');
               await Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => SettingsPage(notes: allNotes),
+                builder: (_) => SettingsPage(
+                  notes: allNotes,
+                  onLocaleChanged: widget.onLocaleChanged,
+                  currentLocale: widget.currentLocale,
+                ),
               ));
               // Refresh state in case settings like background have changed
               setState(() {});
@@ -121,10 +165,10 @@ class _HomePageState extends State<HomePage> {
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: TextField(
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search),
-                      hintText: '搜索标题/内容/标签',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search),
+                      hintText: l10n.search_hint,
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     onChanged: (v) => setState(() => _keyword = v),
@@ -195,7 +239,7 @@ class _HomePageState extends State<HomePage> {
           if (!mounted) return;
           setState(() {});
         },
-        label: const Text('新建'),
+        label: Text(l10n.new_item),
         icon: const Icon(Icons.add),
       ),
     );
@@ -278,13 +322,19 @@ class _NoteCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(note.title.isEmpty ? 'Title' : note.title,
+                        Text(
+                            note.title.isEmpty
+                                ? AppLocalizations.of(context)!.title
+                                : note.title,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w600)),
                         const SizedBox(height: 2),
-                        Text(desc.isEmpty ? 'Description' : desc,
+                        Text(
+                            desc.isEmpty
+                                ? AppLocalizations.of(context)!.description
+                                : desc,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall),
@@ -404,7 +454,9 @@ class _EditorPageState extends State<EditorPage> {
     final desc = _descController.text.trim();
     final body = _contentController.text;
     final trimmedTitle = _titleController.text.trim();
-    final finalTitle = trimmedTitle.isEmpty ? 'Untitled' : trimmedTitle;
+    final finalTitle = trimmedTitle.isEmpty
+        ? AppLocalizations.of(context)!.untitled
+        : trimmedTitle;
 
     final updated = widget.note.copyWith(
       title: finalTitle,
@@ -423,8 +475,9 @@ class _EditorPageState extends State<EditorPage> {
       child: ListView(children: [
         TextField(
           controller: _titleController,
-          decoration: const InputDecoration(
-              hintText: 'Title', border: InputBorder.none),
+          decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.title,
+              border: InputBorder.none),
           style: Theme.of(context)
               .textTheme
               .headlineMedium
@@ -432,8 +485,9 @@ class _EditorPageState extends State<EditorPage> {
         ),
         TextField(
           controller: _descController,
-          decoration: const InputDecoration(
-              hintText: 'Description', border: InputBorder.none),
+          decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.description,
+              border: InputBorder.none),
           style: Theme.of(context).textTheme.bodyLarge,
         ),
         const SizedBox(height: 8),
@@ -441,8 +495,9 @@ class _EditorPageState extends State<EditorPage> {
           controller: _contentController,
           keyboardType: TextInputType.multiline,
           maxLines: null,
-          decoration: const InputDecoration(
-              hintText: 'Content', border: InputBorder.none),
+          decoration: InputDecoration(
+              hintText: AppLocalizations.of(context)!.content,
+              border: InputBorder.none),
           style: Theme.of(context).textTheme.bodyLarge,
         ),
       ]),

@@ -7,6 +7,7 @@ import '../models/note.dart';
 import '../models/comment.dart';
 import '../services/storage_service.dart';
 import '../main.dart' show EditorPage; // reuse editor page
+import '../l10n/app_localizations.dart';
 
 /// Note reader with two-page UX:
 /// - Page 0: shows note content only
@@ -46,15 +47,15 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Note'),
+        title: Text(AppLocalizations.of(context)!.note),
         actions: [
           IconButton(
-            tooltip: '信息',
+            tooltip: AppLocalizations.of(context)!.more_info,
             icon: const Icon(Icons.info_outline),
             onPressed: _showInfo,
           ),
           IconButton(
-            tooltip: '编辑',
+            tooltip: AppLocalizations.of(context)!.edit,
             icon: const Icon(Icons.edit_outlined),
             onPressed: () async {
               final beforeId = _note.id;
@@ -191,9 +192,9 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
                         focusNode: _commentFocusNode,
                         minLines: 1,
                         maxLines: 4,
-                        decoration: const InputDecoration(
-                          hintText: 'Write a reply...',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          hintText: AppLocalizations.of(context)!.write_reply,
+                          border: const OutlineInputBorder(),
                           isDense: true,
                         ),
                         onSubmitted: (_) => _addComment(),
@@ -274,7 +275,8 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Replies', style: Theme.of(context).textTheme.titleLarge),
+              Text(AppLocalizations.of(context)!.replies,
+                  style: Theme.of(context).textTheme.titleLarge),
               const SizedBox.shrink(),
             ],
           ),
@@ -283,7 +285,7 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
         Expanded(
           child: _note.comments.isEmpty
               ? Center(
-                  child: Text('No replies yet. Why not start a discussion?',
+                  child: Text(AppLocalizations.of(context)!.no_replies,
                       style: Theme.of(context)
                           .textTheme
                           .bodyMedium

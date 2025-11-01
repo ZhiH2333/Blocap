@@ -30,8 +30,8 @@ class StorageService {
       await notesFile.writeAsString(jsonEncode({'notes': []}));
     }
     if (!await settingsFile.exists()) {
-      await settingsFile
-          .writeAsString(jsonEncode({'titleScale': 1.0, 'bodyScale': 1.0, 'bgPath': ''}));
+      await settingsFile.writeAsString(
+          jsonEncode({'titleScale': 1.0, 'bodyScale': 1.0, 'bgPath': ''}));
     }
 
     // 读入缓存
@@ -53,7 +53,8 @@ class StorageService {
   Future<void> _saveNotes() async {
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/$_notesFileName');
-    final text = jsonEncode({'notes': _notesCache.map((e) => e.toJson()).toList()});
+    final text =
+        jsonEncode({'notes': _notesCache.map((e) => e.toJson()).toList()});
     await file.writeAsString(text);
   }
 
@@ -82,10 +83,13 @@ class StorageService {
     }
     if (keyword.trim().isNotEmpty) {
       final k = keyword.trim().toLowerCase();
-      it = it.where((n) => n.title.toLowerCase().contains(k) || n.content.toLowerCase().contains(k));
+      it = it.where((n) =>
+          n.title.toLowerCase().contains(k) ||
+          n.content.toLowerCase().contains(k));
     }
     // 按更新时间倒序
-    final list = it.toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final list = it.toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return list;
   }
 
@@ -104,7 +108,8 @@ class StorageService {
   Future<void> changeStatus(String id, String status) async {
     final index = _notesCache.indexWhere((n) => n.id == id);
     if (index >= 0) {
-      _notesCache[index] = _notesCache[index].copyWith(status: status, updatedAt: DateTime.now());
+      _notesCache[index] = _notesCache[index]
+          .copyWith(status: status, updatedAt: DateTime.now());
       await _saveNotes();
     }
   }
@@ -116,9 +121,14 @@ class StorageService {
   }
 
   // 设置：标题与正文字体缩放，以及背景图路径
-  double get titleScale => (_settingsCache['titleScale'] as num?)?.toDouble() ?? 1.0;
-  double get bodyScale => (_settingsCache['bodyScale'] as num?)?.toDouble() ?? 1.0;
+  double get titleScale =>
+      (_settingsCache['titleScale'] as num?)?.toDouble() ?? 1.0;
+  double get bodyScale =>
+      (_settingsCache['bodyScale'] as num?)?.toDouble() ?? 1.0;
   String get bgPath => (_settingsCache['bgPath'] as String?) ?? '';
+
+  /// 用户选择的语言代码（例如 'en' 或 'zh'），为空表示使用系统默认
+  String? get localeCode => (_settingsCache['locale'] as String?);
 
   Future<void> saveTitleScale(double v) async {
     _settingsCache['titleScale'] = v;
@@ -135,11 +145,18 @@ class StorageService {
     await _saveSettings();
   }
 
+  Future<void> saveLocale(String localeCode) async {
+    _settingsCache['locale'] = localeCode;
+    await _saveSettings();
+  }
+
   // 导出：将指定目录下生成 .md 文件（文件名=标题_创建日期.md）
   Future<void> exportToDirectory(String dirPath, {List<Note>? notes}) async {
-    final list = (notes ?? _notesCache).where((n) => n.status != 'deleted').toList();
+    final list =
+        (notes ?? _notesCache).where((n) => n.status != 'deleted').toList();
     for (final n in list) {
-      final safeTitle = n.title.isEmpty ? 'untitled' : n.title.replaceAll('/', '-');
+      final safeTitle =
+          n.title.isEmpty ? 'untitled' : n.title.replaceAll('/', '-');
       final date = n.createdAt.toIso8601String().split('T').first;
       final file = File('$dirPath/${safeTitle}_$date.md');
       final content = '# ${n.title}\n\n' // 标题
@@ -149,5 +166,3 @@ class StorageService {
     }
   }
 }
-
-

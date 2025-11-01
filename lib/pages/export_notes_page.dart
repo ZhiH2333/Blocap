@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// A page that allows users to select and export notes as a Markdown file.
 class ExportNotesPage extends StatefulWidget {
   final List<Note> notes;
@@ -25,12 +27,14 @@ class _ExportNotesPageState extends State<ExportNotesPage> {
 
   // Exports the selected notes as a single Markdown file.
   Future<void> _exportNotes() async {
-    final selectedNotes = widget.notes.where((note) => _selection[note.id] ?? false).toList();
+    final selectedNotes =
+        widget.notes.where((note) => _selection[note.id] ?? false).toList();
 
     if (selectedNotes.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No notes selected')),
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!.no_notes_selected)),
       );
       return;
     }
@@ -55,7 +59,8 @@ class _ExportNotesPageState extends State<ExportNotesPage> {
         buffer.writeln('### Comments');
         buffer.writeln();
         for (final comment in note.comments) {
-          buffer.writeln('> [${dateFormat.format(comment.timestamp)}] ${comment.text}');
+          buffer.writeln(
+              '> [${dateFormat.format(comment.timestamp)}] ${comment.text}');
         }
         buffer.writeln();
       }
@@ -75,11 +80,11 @@ class _ExportNotesPageState extends State<ExportNotesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Export Notes'),
+        title: Text(AppLocalizations.of(context)!.export_notes),
         actions: [
           IconButton(
             icon: const Icon(Icons.download),
-            tooltip: 'Export Selected Notes',
+            tooltip: AppLocalizations.of(context)!.export_selected_notes,
             onPressed: _exportNotes,
           ),
         ],
@@ -87,8 +92,8 @@ class _ExportNotesPageState extends State<ExportNotesPage> {
       body: Column(
         children: [
           SwitchListTile(
-            title: const Text('Include comments'),
-            subtitle: const Text('If enabled, comments will be added to the export file.'),
+            title: Text(AppLocalizations.of(context)!.include_comments),
+            subtitle: Text(AppLocalizations.of(context)!.include_comments_sub),
             value: _exportComments,
             onChanged: (bool value) {
               setState(() {
@@ -104,8 +109,11 @@ class _ExportNotesPageState extends State<ExportNotesPage> {
               itemBuilder: (context, index) {
                 final note = widget.notes[index];
                 return CheckboxListTile(
-                  title: Text(note.title.isEmpty ? 'Untitled Note' : note.title),
-                  subtitle: Text(note.word, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  title: Text(note.title.isEmpty
+                      ? AppLocalizations.of(context)!.untitled_note
+                      : note.title),
+                  subtitle: Text(note.word,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
                   value: _selection[note.id] ?? false,
                   onChanged: (bool? value) {
                     setState(() {
@@ -121,4 +129,3 @@ class _ExportNotesPageState extends State<ExportNotesPage> {
     );
   }
 }
-

@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../services/storage_service.dart';
+import '../l10n/app_localizations.dart';
 
 class BackgroundSettingsPage extends StatefulWidget {
   const BackgroundSettingsPage({super.key});
@@ -16,17 +17,20 @@ class _BackgroundSettingsPageState extends State<BackgroundSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final storage = StorageService.instance;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Background image')),
+      appBar: AppBar(title: Text(l10n.background_image)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             ElevatedButton.icon(
               icon: const Icon(Icons.image_outlined),
-              label: const Text('Choose image'),
+              label: Text(l10n.choose_image),
               onPressed: () async {
-                const typeGroup = XTypeGroup(label: 'images', extensions: ['png', 'jpg', 'jpeg', 'webp']);
+                const typeGroup = XTypeGroup(
+                    label: 'images',
+                    extensions: ['png', 'jpg', 'jpeg', 'webp']);
                 final file = await openFile(acceptedTypeGroups: [typeGroup]);
                 if (file != null) {
                   await storage.saveBackgroundPath(file.path);
@@ -37,7 +41,7 @@ class _BackgroundSettingsPageState extends State<BackgroundSettingsPage> {
             const SizedBox(width: 12),
             OutlinedButton.icon(
               icon: const Icon(Icons.clear),
-              label: const Text('Clear'),
+              label: Text(l10n.clear),
               onPressed: () async {
                 await storage.saveBackgroundPath('');
                 if (mounted) setState(() {});
@@ -51,9 +55,13 @@ class _BackgroundSettingsPageState extends State<BackgroundSettingsPage> {
                 border: Border.all(color: Theme.of(context).dividerColor),
                 image: storage.bgPath.isEmpty
                     ? null
-                    : DecorationImage(image: FileImage(File(storage.bgPath)), fit: BoxFit.cover),
+                    : DecorationImage(
+                        image: FileImage(File(storage.bgPath)),
+                        fit: BoxFit.cover),
               ),
-              child: storage.bgPath.isEmpty ? const Center(child: Text('当前：无')) : const SizedBox.shrink(),
+              child: storage.bgPath.isEmpty
+                  ? Center(child: Text(l10n.no_background))
+                  : const SizedBox.shrink(),
             ),
           ),
         ]),
@@ -61,9 +69,3 @@ class _BackgroundSettingsPageState extends State<BackgroundSettingsPage> {
     );
   }
 }
-
-
-
-
-
-
