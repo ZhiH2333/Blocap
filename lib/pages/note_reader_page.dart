@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+// avoid adding a direct dependency on 'markdown' package; use dynamic element
 
 import '../models/note.dart';
 import '../models/comment.dart';
@@ -9,12 +10,25 @@ import '../services/storage_service.dart';
 import '../main.dart' show EditorPage; // reuse editor page
 import '../l10n/app_localizations.dart';
 
+// Builder for inline <mark> tags used to highlight matched search terms in Markdown
+class _MarkBuilder extends MarkdownElementBuilder {
+  final TextStyle? highlightStyle;
+  _MarkBuilder(this.highlightStyle);
+  @override
+  Widget? visitElementAfter(dynamic element, TextStyle? preferredStyle) {
+    final txt = element.textContent.toString();
+    return Text(txt,
+        style: preferredStyle?.merge(highlightStyle) ?? highlightStyle);
+  }
+}
+
 /// Note reader with two-page UX:
 /// - Page 0: shows note content only
 /// - Page 1: shows replies only, with a Post Reply button and input
 class NoteReaderPage extends StatefulWidget {
-  const NoteReaderPage({super.key, required this.note});
+  const NoteReaderPage({super.key, required this.note, this.keyword = ''});
   final Note note;
+  final String keyword;
 
   @override
   State<NoteReaderPage> createState() => _NoteReaderPageState();
@@ -42,6 +56,28 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
     _commentFocusNode.dispose();
     super.dispose();
   }
+
+  // Build markdown string where matched tokens are wrapped with <mark>...</mark>
+  String _buildMarkedContent(String content, String keyword) {
+    if (keyword.trim().isEmpty) return content.replaceAll('\n', '  \n');
+    final tokens = keyword
+        .trim()
+        .toLowerCase()
+        .split(RegExp(r"\\s+"))
+        .where((t) => t.isNotEmpty)
+        .toList();
+    if (tokens.isEmpty) return content.replaceAll('\n', '  \n');
+
+    final pattern = tokens.map((t) => RegExp.escape(t)).join('|');
+    final reg = RegExp(pattern, caseSensitive: false);
+
+    // Replace matches with <mark>...</mark>
+    final replaced =
+        content.replaceAllMapped(reg, (m) => '<mark>${m[0]}</mark>');
+    return replaced.replaceAll('\n', '  \n');
+  }
+
+  // Custom builder for <mark> tag to render highlighted text
 
   @override
   Widget build(BuildContext context) {
@@ -256,8 +292,14 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: MarkdownBody(
-                    data: _note.content.replaceAll('\n', '  \n'),
-                    selectable: true),
+                    data: _buildMarkedContent(_note.content, widget.keyword),
+                    selectable: true,
+                    builders: {
+                      'mark': _MarkBuilder(Theme.of(context)
+                          .textTheme
+                          .bodyLarge
+                          ?.copyWith(backgroundColor: Colors.yellow[200]))
+                    }),
               ),
             ),
           ),
@@ -298,6 +340,7 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
                     final c = _note.comments[i];
                     return _CommentCard(
                       comment: c,
+                      keyword: widget.keyword,
                       onEdit: (text) => _editComment(c, text),
                       onDelete: () => _deleteComment(c),
                     );
@@ -371,10 +414,14 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
 
 class _CommentCard extends StatefulWidget {
   const _CommentCard(
-      {required this.comment, required this.onEdit, required this.onDelete});
+      {required this.comment,
+      required this.onEdit,
+      required this.onDelete,
+      this.keyword = ''});
   final Comment comment;
   final Future<void> Function(String newText) onEdit;
   final Future<void> Function() onDelete;
+  final String keyword;
 
   @override
   State<_CommentCard> createState() => _CommentCardState();
@@ -410,7 +457,19 @@ class _CommentCardState extends State<_CommentCard> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(time, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 6),
-          Text(c.text, style: Theme.of(context).textTheme.bodyLarge),
+          // 高亮匹配关键字
+          if (widget.keyword.trim().isEmpty)
+            Text(c.text, style: Theme.of(context).textTheme.bodyLarge)
+          else
+            Text.rich(_buildHighlightedSpan(
+                c.text,
+                widget.keyword,
+                Theme.of(context).textTheme.bodyLarge ?? const TextStyle(),
+                Theme.of(context)
+                        .textTheme
+                        .bodyLarge
+                        ?.copyWith(backgroundColor: Colors.yellow[200]) ??
+                    const TextStyle())),
         ]),
       ),
     );
@@ -475,4 +534,33 @@ class _CommentCardState extends State<_CommentCard> {
   }
 
   String _two(int v) => v.toString().padLeft(2, '0');
+}
+
+// Helper: build TextSpan with token-based highlights (case-insensitive)
+TextSpan _buildHighlightedSpan(String source, String keyword,
+    TextStyle baseStyle, TextStyle highlightStyle) {
+  final tokens = keyword
+      .trim()
+      .toLowerCase()
+      .split(RegExp(r"\s+"))
+      .where((t) => t.isNotEmpty)
+      .toList();
+  if (tokens.isEmpty) return TextSpan(text: source, style: baseStyle);
+  final pattern = tokens.map((t) => RegExp.escape(t)).join('|');
+  final reg = RegExp(pattern, caseSensitive: false);
+  final children = <TextSpan>[];
+  var lastEnd = 0;
+  for (final m in reg.allMatches(source)) {
+    if (m.start > lastEnd) {
+      children.add(
+          TextSpan(text: source.substring(lastEnd, m.start), style: baseStyle));
+    }
+    children.add(TextSpan(
+        text: source.substring(m.start, m.end), style: highlightStyle));
+    lastEnd = m.end;
+  }
+  if (lastEnd < source.length) {
+    children.add(TextSpan(text: source.substring(lastEnd), style: baseStyle));
+  }
+  return TextSpan(children: children, style: baseStyle);
 }

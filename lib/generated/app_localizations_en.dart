@@ -12,7 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get capsule => 'Capsule';
 
   @override
-  String get search_hint => 'Search title/content/tags';
+  String get search_hint => 'Search...';
 
   @override
   String get new_item => 'New';
@@ -163,5 +163,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get about_description => 'A minimal Material 3 note app.';
 
   @override
+  String get editing_existing_note => 'You are editing an existing note';
+
+  @override
   String get month_initials => 'J,F,M,A,M,J,J,A,S,O,N,D';
+
+  @override
+  String search_results(Object count) {
+    return '$count results';
+  }
+
+  @override
+  String search_match_snippet(Object snippet) {
+    return 'Matched: \"$snippet\"';
+  }
 }

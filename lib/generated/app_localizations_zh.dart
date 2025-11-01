@@ -12,7 +12,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get capsule => 'Capsule';
 
   @override
-  String get search_hint => '搜索标题/内容/标签';
+  String get search_hint => '搜索...';
 
   @override
   String get new_item => '新建';
@@ -162,5 +162,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get about_description => '一个极简的 Material 3 笔记应用。';
 
   @override
+  String get editing_existing_note => '您正在编辑一个已存在的笔记';
+
+  @override
   String get month_initials => '一,二,三,四,五,六,七,八,九,十,十一,十二';
+
+  @override
+  String search_results(Object count) {
+    return '$count 条结果';
+  }
+
+  @override
+  String search_match_snippet(Object snippet) {
+    return '匹配片段：\"$snippet\"';
+  }
 }

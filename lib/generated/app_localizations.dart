@@ -107,7 +107,7 @@ abstract class AppLocalizations {
   /// No description provided for @search_hint.
   ///
   /// In en, this message translates to:
-  /// **'Search title/content/tags'**
+  /// **'Search...'**
   String get search_hint;
 
   /// No description provided for @new_item.
@@ -404,11 +404,29 @@ abstract class AppLocalizations {
   /// **'A minimal Material 3 note app.'**
   String get about_description;
 
+  /// No description provided for @editing_existing_note.
+  ///
+  /// In en, this message translates to:
+  /// **'You are editing an existing note'**
+  String get editing_existing_note;
+
   /// No description provided for @month_initials.
   ///
   /// In en, this message translates to:
   /// **'J,F,M,A,M,J,J,A,S,O,N,D'**
   String get month_initials;
+
+  /// No description provided for @search_results.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} results'**
+  String search_results(Object count);
+
+  /// No description provided for @search_match_snippet.
+  ///
+  /// In en, this message translates to:
+  /// **'Matched: \"{snippet}\"'**
+  String search_match_snippet(Object snippet);
 }
 
 class _AppLocalizationsDelegate

@@ -1,7 +1,7 @@
 {
   "@@locale": "en",
   "capsule": "Capsule",
-  "search_hint": "Search title/content/tags",
+  "search_hint": "Search...",
   "new_item": "New",
   "settings": "Settings",
   "statistics": "Statistics",
@@ -51,5 +51,16 @@
   "untitled_note": "Untitled Note",
   "clear": "Clear",
   "about_description": "A minimal Material 3 note app.",
+  "editing_existing_note": "You are editing an existing note",
   "month_initials": "J,F,M,A,M,J,J,A,S,O,N,D"
+  ,"search_results": "{count} results"
+  ,"@search_results": {
+    "placeholders": {
+      "count": {}
+    }
+  }
+  ,"search_match_snippet": "Matched: \"{snippet}\"",
+  "@search_match_snippet": {
+    "placeholders": { "snippet": {} }
+  }
 }

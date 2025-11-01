@@ -1,7 +1,7 @@
 {
   "@@locale": "zh",
   "capsule": "Capsule",
-  "search_hint": "搜索标题/内容/标签",
+  "search_hint": "搜索...",
   "new_item": "新建",
   "settings": "设置",
   "statistics": "统计信息",
@@ -51,5 +51,16 @@
   "untitled_note": "未命名笔记",
   "clear": "清除",
   "about_description": "一个极简的 Material 3 笔记应用。",
+  "editing_existing_note": "您正在编辑一个已存在的笔记",
   "month_initials": "一,二,三,四,五,六,七,八,九,十,十一,十二"
+  ,"search_results": "{count} 条结果"
+  ,"@search_results": {
+    "placeholders": {
+      "count": {}
+    }
+  }
+  ,"search_match_snippet": "匹配片段：\"{snippet}\"",
+  "@search_match_snippet": {
+    "placeholders": { "snippet": {} }
+  }
 }
