@@ -19,8 +19,7 @@ class NoteReaderPage extends StatefulWidget {
   State<NoteReaderPage> createState() => _NoteReaderPageState();
 }
 
-class _NoteReaderPageState extends State<NoteReaderPage>
-    with SingleTickerProviderStateMixin {
+class _NoteReaderPageState extends State<NoteReaderPage> {
   late Note _note;
 
   final PageController _pageController = PageController();
@@ -28,18 +27,11 @@ class _NoteReaderPageState extends State<NoteReaderPage>
 
   final TextEditingController _commentController = TextEditingController();
   final FocusNode _commentFocusNode = FocusNode();
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseAnim;
 
   @override
   void initState() {
     super.initState();
     _note = widget.note;
-    _pulseController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900))
-      ..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.9, end: 1.2).animate(
-        CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
   }
 
   @override
@@ -47,7 +39,6 @@ class _NoteReaderPageState extends State<NoteReaderPage>
     _pageController.dispose();
     _commentController.dispose();
     _commentFocusNode.dispose();
-    _pulseController.dispose();
     super.dispose();
   }
 
@@ -83,14 +74,102 @@ class _NoteReaderPageState extends State<NoteReaderPage>
       body: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () => FocusScope.of(context).unfocus(),
-        child: PageView(
-          controller: _pageController,
-          onPageChanged: (i) => setState(() => _pageIndex = i),
+        child: Stack(
           children: [
-            // Page 0: Note content only
-            _buildContentPage(context),
-            // Page 1: Replies only
-            _buildRepliesPage(context),
+            PageView(
+              controller: _pageController,
+              onPageChanged: (i) => setState(() => _pageIndex = i),
+              children: [
+                // Page 0: Note content only
+                _buildContentPage(context),
+                // Page 1: Replies only
+                _buildRepliesPage(context),
+              ],
+            ),
+            // Floating two-dot indicator — moved to top-right of the page
+            Positioned(
+              top: 12,
+              right: 16,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(20),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    )
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // animated dot 1
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(
+                          begin: _pageIndex == 0 ? 1.0 : 0.9,
+                          end: _pageIndex == 0 ? 1.0 : 0.9),
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeInOut,
+                      builder: (context, scale, child) {
+                        final active = _pageIndex == 0;
+                        return Transform.scale(
+                          scale: active ? 1.12 : 1.0,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeInOut,
+                            width: active ? 14 : 12,
+                            height: active ? 14 : 12,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: active
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withAlpha((0.28 * 255).round()),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    // animated dot 2
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(
+                          begin: _pageIndex == 1 ? 1.0 : 0.9,
+                          end: _pageIndex == 1 ? 1.0 : 0.9),
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeInOut,
+                      builder: (context, scale, child) {
+                        final active = _pageIndex == 1;
+                        return Transform.scale(
+                          scale: active ? 1.12 : 1.0,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeInOut,
+                            width: active ? 14 : 12,
+                            height: active ? 14 : 12,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: active
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withAlpha((0.28 * 255).round()),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -182,17 +261,6 @@ class _NoteReaderPageState extends State<NoteReaderPage>
             ),
           ),
         const SizedBox(height: 12),
-        // Small hint at bottom of content page to indicate swipe for replies
-        Center(
-          child: Opacity(
-            opacity: 0.6,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Text('Swipe left to view replies',
-                  style: Theme.of(context).textTheme.bodySmall),
-            ),
-          ),
-        ),
         const SizedBox(height: 68),
       ],
     );
@@ -207,29 +275,7 @@ class _NoteReaderPageState extends State<NoteReaderPage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Replies', style: Theme.of(context).textTheme.titleLarge),
-              // Subtle swipe hint: colored dot + 'Swipe' text
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ScaleTransition(
-                    scale: _pulseAnim,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Opacity(
-                    opacity: 0.85,
-                    child: Text('Swipe',
-                        style: Theme.of(context).textTheme.bodyMedium),
-                  ),
-                ],
-              ),
+              const SizedBox.shrink(),
             ],
           ),
         ),
