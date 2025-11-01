@@ -1,0 +1,33 @@
+# Capsule 笔记应用 pubspec
+name: capsule
+description: 简洁的 Markdown 笔记应用（Material 3）
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Markdown 预览
+  flutter_markdown: ^0.7.3+1
+  # 本地文件目录
+  path_provider: ^2.1.4
+  # 选择文件/文件夹（用于选择背景图与导出目录）
+  file_selector: ^1.0.3
+  # 统计页图表与日历
+  fl_chart: ^0.69.0
+  table_calendar: ^3.1.0
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    # 可放置默认背景图（留空即可，运行不报错）
+    - assets/
