@@ -29,7 +29,7 @@ class SettingsPage extends StatelessWidget {
             leading: const Icon(Icons.font_download),
             title: const Text('Font Size'),
             onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (context) => FontSettingsPage()));
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const FontSettingsPage()));
             },
           ),
           // A ListTile that navigates to the BackgroundSettingsPage.
@@ -37,7 +37,7 @@ class SettingsPage extends StatelessWidget {
             leading: const Icon(Icons.image),
             title: const Text('Background image'),
             onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (context) => BackgroundSettingsPage()));
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const BackgroundSettingsPage()));
             },
           ),
           // A ListTile that navigates to the ExportNotesPage, passing the notes list.
@@ -53,7 +53,7 @@ class SettingsPage extends StatelessWidget {
             leading: const Icon(Icons.info),
             title: const Text('About'),
             onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (context) => AboutPage()));
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const AboutPage()));
             },
           ),
         ],
@@ -193,7 +193,7 @@ class _BackgroundSettingsPageState extends State<BackgroundSettingsPage> {
                       icon: const Icon(Icons.image_outlined),
                       label: const Text('Select Image'),
                       onPressed: () async {
-                        final typeGroup = XTypeGroup(label: 'images', extensions: ['png', 'jpg', 'jpeg', 'webp']);
+                        const typeGroup = XTypeGroup(label: 'images', extensions: ['png', 'jpg', 'jpeg', 'webp']);
                         final file = await openFile(acceptedTypeGroups: [typeGroup]);
                         if (file != null) {
                           await _storage.saveBackgroundPath(file.path);
@@ -278,3 +278,4 @@ class AboutPage extends StatelessWidget {
     );
   }
 }
+

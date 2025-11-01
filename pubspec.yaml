@@ -21,6 +21,8 @@ dependencies:
   table_calendar: ^3.1.0
   # 分享（用于导出后弹出分享对话框）
   share_plus: ^6.3.0
+  # 国际化工具（used by summary and export pages）
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

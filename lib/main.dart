@@ -1,9 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 
 import 'models/note.dart';
 import 'services/storage_service.dart';
@@ -68,7 +66,10 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         title: Text('Capsule (${notes.length})',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             tooltip: '统计信息',
@@ -96,72 +97,81 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       drawer: _buildDrawer(),
-      body: Stack(children: [
-        // 背景层：可选图片
-        if (bgPath.isNotEmpty)
-          Positioned.fill(
-            child: Image.file(File(bgPath), fit: BoxFit.cover),
-          ),
-        if (bgPath.isNotEmpty)
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Container(color: Colors.white.withOpacity(0.85)),
-            ),
-          ),
-        // 内容层
-        Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: TextField(
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: '搜索标题/内容/标签',
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-                onChanged: (v) => setState(() => _keyword = v),
+      // Wrap body with GestureDetector so tapping empty areas dismisses the keyboard.
+      body: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Stack(children: [
+            // 背景层：可选图片
+            if (bgPath.isNotEmpty)
+              Positioned.fill(
+                child: Image.file(File(bgPath), fit: BoxFit.cover),
               ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: notes.length,
-                itemBuilder: (_, i) => _NoteCard(
-                  note: notes[i],
-                  onTap: () async {
-                    await Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => NoteReaderPage(note: notes[i]),
-                    ));
-                    setState(() {});
-                  },
-                  onAction: (action) async {
-                    // 统一在列表层处理，便于刷新与过滤
-                    switch (action) {
-                      case NoteAction.archive:
-                        await widget.storage.changeStatus(notes[i].id, 'archived');
-                        break;
-                      case NoteAction.unarchive:
-                        await widget.storage.changeStatus(notes[i].id, 'active');
-                        break;
-                      case NoteAction.delete:
-                        await widget.storage.changeStatus(notes[i].id, 'deleted');
-                        break;
-                      case NoteAction.restore:
-                        await widget.storage.changeStatus(notes[i].id, 'active');
-                        break;
-                      case NoteAction.deletePermanently:
-                        await widget.storage.removePermanently(notes[i].id);
-                        break;
-                    }
-                    setState(() {});
-                  },
+            if (bgPath.isNotEmpty)
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                      color: Colors.white.withAlpha((0.85 * 255).round())),
                 ),
               ),
+            // 内容层
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: '搜索标题/内容/标签',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    onChanged: (v) => setState(() => _keyword = v),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: notes.length,
+                    itemBuilder: (_, i) => _NoteCard(
+                      note: notes[i],
+                      onTap: () async {
+                        await Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => NoteReaderPage(note: notes[i]),
+                        ));
+                        setState(() {});
+                      },
+                      onAction: (action) async {
+                        // 统一在列表层处理，便于刷新与过滤
+                        switch (action) {
+                          case NoteAction.archive:
+                            await widget.storage
+                                .changeStatus(notes[i].id, 'archived');
+                            break;
+                          case NoteAction.unarchive:
+                            await widget.storage
+                                .changeStatus(notes[i].id, 'active');
+                            break;
+                          case NoteAction.delete:
+                            await widget.storage
+                                .changeStatus(notes[i].id, 'deleted');
+                            break;
+                          case NoteAction.restore:
+                            await widget.storage
+                                .changeStatus(notes[i].id, 'active');
+                            break;
+                          case NoteAction.deletePermanently:
+                            await widget.storage.removePermanently(notes[i].id);
+                            break;
+                        }
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ]),
+          ])),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final now = DateTime.now();
@@ -176,10 +186,13 @@ class _HomePageState extends State<HomePage> {
             updatedAt: now,
             comments: const [],
           );
+          final nav = Navigator.of(context);
           await widget.storage.upsert(note);
-          await Navigator.of(context).push(MaterialPageRoute(
+          if (!mounted) return;
+          await nav.push(MaterialPageRoute(
             builder: (_) => EditorPage(note: note),
           ));
+          if (!mounted) return;
           setState(() {});
         },
         label: const Text('新建'),
@@ -208,7 +221,9 @@ class _HomePageState extends State<HomePage> {
         child: ListView(
           children: [
             const DrawerHeader(
-              child: Align(alignment: Alignment.bottomLeft, child: Text('Menu', style: TextStyle(fontSize: 24))),
+              child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Text('Menu', style: TextStyle(fontSize: 24))),
             ),
             tile('全部', 'all', Icons.all_inclusive),
             tile('归档', 'archived', Icons.archive_outlined),
@@ -225,7 +240,8 @@ enum NoteAction { archive, unarchive, delete, restore, deletePermanently }
 
 // 单个卡片：标题 + 词数 + 时间
 class _NoteCard extends StatelessWidget {
-  const _NoteCard({required this.note, required this.onTap, required this.onAction});
+  const _NoteCard(
+      {required this.note, required this.onTap, required this.onAction});
   final Note note;
   final VoidCallback onTap;
   final void Function(NoteAction action) onAction;
@@ -235,7 +251,9 @@ class _NoteCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final desc = note.summary.isNotEmpty
         ? note.summary
-        : (note.content.split('\n').isNotEmpty ? note.content.split('\n').first.trim() : '');
+        : (note.content.split('\n').isNotEmpty
+            ? note.content.split('\n').first.trim()
+            : '');
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Material(
@@ -249,7 +267,7 @@ class _NoteCard extends StatelessWidget {
               shape: const StadiumBorder(),
               gradient: LinearGradient(colors: [
                 scheme.primaryContainer,
-                scheme.primaryContainer.withOpacity(0.85),
+                scheme.primaryContainer.withAlpha((0.85 * 255).round()),
               ]),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -273,23 +291,30 @@ class _NoteCard extends StatelessWidget {
                       ]),
                 ),
                 PopupMenuButton<NoteAction>(
-                  icon: Icon(Icons.more_horiz, color: Colors.black.withOpacity(0.6)),
+                  icon: Icon(Icons.more_horiz,
+                      color: Colors.black.withAlpha((0.6 * 255).round())),
                   color: const Color(0xFFF2F2F7),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   elevation: 6,
                   onSelected: onAction,
                   itemBuilder: (context) {
                     final items = <PopupMenuEntry<NoteAction>>[];
                     if (note.status == 'deleted') {
-                      items.add(_popupStyled(NoteAction.restore, Icons.restore_from_trash_outlined, 'Restore'));
-                      items.add(_popupStyled(
-                          NoteAction.deletePermanently, Icons.delete_forever_outlined, 'Delete Permanently'));
+                      items.add(_popupStyled(NoteAction.restore,
+                          Icons.restore_from_trash_outlined, 'Restore'));
+                      items.add(_popupStyled(NoteAction.deletePermanently,
+                          Icons.delete_forever_outlined, 'Delete Permanently'));
                     } else if (note.status == 'archived') {
-                      items.add(_popupStyled(NoteAction.unarchive, Icons.unarchive_outlined, 'Unarchive'));
-                      items.add(_popupStyled(NoteAction.delete, Icons.delete_outline, 'Delete'));
+                      items.add(_popupStyled(NoteAction.unarchive,
+                          Icons.unarchive_outlined, 'Unarchive'));
+                      items.add(_popupStyled(
+                          NoteAction.delete, Icons.delete_outline, 'Delete'));
                     } else {
-                      items.add(_popupStyled(NoteAction.archive, Icons.archive_outlined, 'Archive'));
-                      items.add(_popupStyled(NoteAction.delete, Icons.delete_outline, 'Delete'));
+                      items.add(_popupStyled(NoteAction.archive,
+                          Icons.archive_outlined, 'Archive'));
+                      items.add(_popupStyled(
+                          NoteAction.delete, Icons.delete_outline, 'Delete'));
                     }
                     return items;
                   },
@@ -303,15 +328,18 @@ class _NoteCard extends StatelessWidget {
   }
 }
 
-PopupMenuItem<NoteAction> _popupStyled(NoteAction action, IconData icon, String text) {
+PopupMenuItem<NoteAction> _popupStyled(
+    NoteAction action, IconData icon, String text) {
   return PopupMenuItem<NoteAction>(
     value: action,
     height: 56,
-    child: Row(children: [Icon(icon, size: 20), const SizedBox(width: 12), Text(text)]),
+    child: Row(children: [
+      Icon(icon, size: 20),
+      const SizedBox(width: 12),
+      Text(text)
+    ]),
   );
 }
-
-
 
 // 编辑/预览页
 class EditorPage extends StatefulWidget {
@@ -349,7 +377,7 @@ class _EditorPageState extends State<EditorPage> {
     final storage = StorageService.instance;
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, __) {
         if (didPop) return;
         _saveAndExit(storage);
       },
@@ -360,7 +388,9 @@ class _EditorPageState extends State<EditorPage> {
             onPressed: () => _saveAndExit(storage),
           ),
           actions: [
-            IconButton(icon: const Icon(Icons.check), onPressed: () => _saveAndExit(storage)),
+            IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: () => _saveAndExit(storage)),
           ],
         ),
         body: _buildEditingView(),
@@ -393,21 +423,27 @@ class _EditorPageState extends State<EditorPage> {
       child: ListView(children: [
         TextField(
           controller: _titleController,
-          decoration: const InputDecoration(hintText: 'Title', border: InputBorder.none),
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+          decoration: const InputDecoration(
+              hintText: 'Title', border: InputBorder.none),
+          style: Theme.of(context)
+              .textTheme
+              .headlineMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         TextField(
           controller: _descController,
-          decoration: const InputDecoration(hintText: 'Description', border: InputBorder.none),
+          decoration: const InputDecoration(
+              hintText: 'Description', border: InputBorder.none),
           style: Theme.of(context).textTheme.bodyLarge,
         ),
         const SizedBox(height: 8),
         TextField(
-            controller: _contentController,
-            keyboardType: TextInputType.multiline,
-            maxLines: null,
-            decoration: const InputDecoration(hintText: 'Content', border: InputBorder.none),
-            style: Theme.of(context).textTheme.bodyLarge,
+          controller: _contentController,
+          keyboardType: TextInputType.multiline,
+          maxLines: null,
+          decoration: const InputDecoration(
+              hintText: 'Content', border: InputBorder.none),
+          style: Theme.of(context).textTheme.bodyLarge,
         ),
       ]),
     );
@@ -421,7 +457,9 @@ class _EditorPageState extends State<EditorPage> {
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
-          border: Border(top: BorderSide(color: Theme.of(context).dividerColor, width: 0.5)),
+          border: Border(
+              top: BorderSide(
+                  color: Theme.of(context).dividerColor, width: 0.5)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -443,7 +481,8 @@ class _EditorPageState extends State<EditorPage> {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
-      child: Padding(padding: const EdgeInsets.all(8.0), child: Icon(icon, size: 22)),
+      child: Padding(
+          padding: const EdgeInsets.all(8.0), child: Icon(icon, size: 22)),
     );
   }
 
@@ -451,8 +490,10 @@ class _EditorPageState extends State<EditorPage> {
   void _insertSyntax(String syntax, int offset) {
     final text = _contentController.text;
     final selection = _contentController.selection;
-    final newText = '${selection.textBefore(text)}$syntax${selection.textInside(text)}${selection.textAfter(text)}';
+    final newText =
+        '${selection.textBefore(text)}$syntax${selection.textInside(text)}${selection.textAfter(text)}';
     _contentController.text = newText;
-    _contentController.selection = TextSelection.fromPosition(TextPosition(offset: selection.start + offset));
+    _contentController.selection = TextSelection.fromPosition(
+        TextPosition(offset: selection.start + offset));
   }
 }

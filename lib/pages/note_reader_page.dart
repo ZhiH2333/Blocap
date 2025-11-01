@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../models/note.dart';
-import '../services/storage_service.dart';
 import '../models/comment.dart';
-import '../main.dart' show EditorPage; // 直接复用已有编辑页
+import '../services/storage_service.dart';
+import '../main.dart' show EditorPage; // reuse editor page
 
-// 只读笔记页面：展示创建时间/标题/副标题与 Markdown 内容
+/// Note reader with two-page UX:
+/// - Page 0: shows note content only
+/// - Page 1: shows replies only, with a Post Reply button and input
 class NoteReaderPage extends StatefulWidget {
   const NoteReaderPage({super.key, required this.note});
   final Note note;
@@ -17,14 +19,36 @@ class NoteReaderPage extends StatefulWidget {
   State<NoteReaderPage> createState() => _NoteReaderPageState();
 }
 
-class _NoteReaderPageState extends State<NoteReaderPage> {
+class _NoteReaderPageState extends State<NoteReaderPage>
+    with SingleTickerProviderStateMixin {
   late Note _note;
+
+  final PageController _pageController = PageController();
+  int _pageIndex = 0;
+
   final TextEditingController _commentController = TextEditingController();
+  final FocusNode _commentFocusNode = FocusNode();
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnim;
 
   @override
   void initState() {
     super.initState();
     _note = widget.note;
+    _pulseController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 900))
+      ..repeat(reverse: true);
+    _pulseAnim = Tween<double>(begin: 0.9, end: 1.2).animate(
+        CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _commentController.dispose();
+    _commentFocusNode.dispose();
+    _pulseController.dispose();
+    super.dispose();
   }
 
   @override
@@ -46,7 +70,7 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
               await Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => EditorPage(note: _note),
               ));
-              // 返回后从存储刷新该笔记
+              // Refresh from storage (in case of edit)
               final refreshed = StorageService.instance
                   .getNotes(status: 'all')
                   .firstWhere((n) => n.id == beforeId, orElse: () => _note);
@@ -55,106 +79,185 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            _note.createdAt.toIso8601String().split('T').first,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          if (_note.title.isNotEmpty)
-            Text(_note.title,
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
-          // Description：独立 summary 字段，为空则不显示
-          Builder(builder: (_) {
-            final firstLine = _note.summary.trim();
-            if (firstLine.isEmpty) return const SizedBox.shrink();
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(firstLine, style: Theme.of(context).textTheme.bodyLarge),
-            );
-          }),
-          if (_note.content.isNotEmpty) const SizedBox(height: 8),
-          if (_note.content.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest
-                        .withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: MarkdownBody(
-                    data: _note.content.replaceAll('\n', '  \n'),
-                    selectable: true,
-                  ),
-                ),
-              ),
-            ),
-
-          const SizedBox(height: 24),
-          Divider(color: Theme.of(context).dividerColor),
-          const SizedBox(height: 8),
-          Text('Replies', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          if (_note.comments.isEmpty)
-            Text('No replies yet. Why not start a discussion?',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).hintColor))
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _note.comments.length,
-              itemBuilder: (_, i) {
-                final c = _note.comments[i];
-                return _CommentCard(
-                  comment: c,
-                  onEdit: (text) => _editComment(c, text),
-                  onDelete: () => _deleteComment(c),
-                );
-              },
-            ),
-
-          const SizedBox(height: 80),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Row(children: [
-            Expanded(
-              child: TextField(
-                controller: _commentController,
-                decoration: InputDecoration(
-                  hintText: 'Post your reply',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.8),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                ),
-                onSubmitted: (_) => _addComment(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(icon: const Icon(Icons.send), onPressed: _addComment),
-          ]),
+      // Gesture to dismiss keyboard when tapping blank areas
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: PageView(
+          controller: _pageController,
+          onPageChanged: (i) => setState(() => _pageIndex = i),
+          children: [
+            // Page 0: Note content only
+            _buildContentPage(context),
+            // Page 1: Replies only
+            _buildRepliesPage(context),
+          ],
         ),
       ),
+      // Show reply input only on replies page; AnimatedPadding avoids keyboard overlap
+      bottomNavigationBar: _pageIndex == 1
+          ? AnimatedPadding(
+              duration: const Duration(milliseconds: 150),
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        focusNode: _commentFocusNode,
+                        minLines: 1,
+                        maxLines: 4,
+                        decoration: const InputDecoration(
+                          hintText: 'Write a reply...',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        onSubmitted: (_) => _addComment(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                        icon: const Icon(Icons.send), onPressed: _addComment),
+                  ]),
+                ),
+              ),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildContentPage(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          _note.createdAt.toIso8601String().split('T').first,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 12),
+        if (_note.title.isNotEmpty)
+          Text(_note.title,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 12),
+        if (_note.summary.trim().isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withAlpha((0.6 * 255).round()),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(_note.summary.trim(),
+                style: Theme.of(context).textTheme.bodyLarge),
+          ),
+        if (_note.content.isNotEmpty) const SizedBox(height: 8),
+        if (_note.content.isNotEmpty)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withAlpha((0.5 * 255).round()),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: MarkdownBody(
+                    data: _note.content.replaceAll('\n', '  \n'),
+                    selectable: true),
+              ),
+            ),
+          ),
+        const SizedBox(height: 12),
+        // Small hint at bottom of content page to indicate swipe for replies
+        Center(
+          child: Opacity(
+            opacity: 0.6,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text('Swipe left to view replies',
+                  style: Theme.of(context).textTheme.bodySmall),
+            ),
+          ),
+        ),
+        const SizedBox(height: 68),
+      ],
+    );
+  }
+
+  Widget _buildRepliesPage(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Replies', style: Theme.of(context).textTheme.titleLarge),
+              // Subtle swipe hint: colored dot + 'Swipe' text
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ScaleTransition(
+                    scale: _pulseAnim,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Opacity(
+                    opacity: 0.85,
+                    child: Text('Swipe',
+                        style: Theme.of(context).textTheme.bodyMedium),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: _note.comments.isEmpty
+              ? Center(
+                  child: Text('No replies yet. Why not start a discussion?',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: Theme.of(context).hintColor)),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  itemCount: _note.comments.length,
+                  itemBuilder: (_, i) {
+                    final c = _note.comments[i];
+                    return _CommentCard(
+                      comment: c,
+                      onEdit: (text) => _editComment(c, text),
+                      onDelete: () => _deleteComment(c),
+                    );
+                  },
+                ),
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 
@@ -167,14 +270,16 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Words: ${_note.content.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).length}') ,
+            Text(
+                'Words: ${_note.content.trim().split(RegExp(r"\\\\s+")).where((e) => e.isNotEmpty).length}'),
             Text('Characters: ${_note.content.length}'),
             Text('Creation: ${_note.createdAt}'),
             Text('Modified: ${_note.updatedAt}'),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭')),
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('关闭'))
         ],
       ),
     );
@@ -183,8 +288,12 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
   Future<void> _addComment() async {
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
-    final newComment = Comment(id: 'c_${DateTime.now().millisecondsSinceEpoch}', text: text, timestamp: DateTime.now());
-    final updated = _note.copyWith(comments: [..._note.comments, newComment], updatedAt: DateTime.now());
+    final newComment = Comment(
+        id: 'c_${DateTime.now().millisecondsSinceEpoch}',
+        text: text,
+        timestamp: DateTime.now());
+    final updated = _note.copyWith(
+        comments: [..._note.comments, newComment], updatedAt: DateTime.now());
     await StorageService.instance.upsert(updated);
     setState(() {
       _note = updated;
@@ -193,13 +302,19 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
   }
 
   Future<void> _deleteComment(Comment c) async {
-    final updated = _note.copyWith(comments: _note.comments.where((e) => e.id != c.id).toList(), updatedAt: DateTime.now());
+    final updated = _note.copyWith(
+        comments: _note.comments.where((e) => e.id != c.id).toList(),
+        updatedAt: DateTime.now());
     await StorageService.instance.upsert(updated);
     setState(() => _note = updated);
   }
 
   Future<void> _editComment(Comment c, String newText) async {
-    final list = _note.comments.map((e) => e.id == c.id ? Comment(id: c.id, text: newText, timestamp: c.timestamp) : e).toList();
+    final list = _note.comments
+        .map((e) => e.id == c.id
+            ? Comment(id: c.id, text: newText, timestamp: c.timestamp)
+            : e)
+        .toList();
     final updated = _note.copyWith(comments: list, updatedAt: DateTime.now());
     await StorageService.instance.upsert(updated);
     setState(() => _note = updated);
@@ -207,7 +322,8 @@ class _NoteReaderPageState extends State<NoteReaderPage> {
 }
 
 class _CommentCard extends StatefulWidget {
-  const _CommentCard({required this.comment, required this.onEdit, required this.onDelete});
+  const _CommentCard(
+      {required this.comment, required this.onEdit, required this.onDelete});
   final Comment comment;
   final Future<void> Function(String newText) onEdit;
   final Future<void> Function() onDelete;
@@ -222,7 +338,8 @@ class _CommentCardState extends State<_CommentCard> {
   @override
   Widget build(BuildContext context) {
     final c = widget.comment;
-    final time = '${_two(c.timestamp.month)} ${_two(c.timestamp.day)}, ${_two(c.timestamp.hour)}:${_two(c.timestamp.minute)}';
+    final time =
+        '${_two(c.timestamp.month)} ${_two(c.timestamp.day)}, ${_two(c.timestamp.hour)}:${_two(c.timestamp.minute)}';
     return GestureDetector(
       onTapDown: (d) => _tapPosition = d.globalPosition,
       onLongPress: _showMenu,
@@ -230,10 +347,16 @@ class _CommentCardState extends State<_CommentCard> {
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.6),
+          color: Theme.of(context)
+              .colorScheme
+              .surfaceContainerHighest
+              .withAlpha((0.6 * 255).round()),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4)),
+            BoxShadow(
+                color: Colors.black.withAlpha((0.05 * 255).round()),
+                blurRadius: 8,
+                offset: const Offset(0, 4)),
           ],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -251,11 +374,26 @@ class _CommentCardState extends State<_CommentCard> {
     final selected = await showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(pos.dx, pos.dy, pos.dx, pos.dy),
-      color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.9),
+      color: Theme.of(context)
+          .colorScheme
+          .surfaceContainerHighest
+          .withAlpha((0.9 * 255).round()),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       items: [
-        PopupMenuItem(value: 'edit', child: Row(children: const [Icon(Icons.edit_outlined), SizedBox(width: 12), Text('Edit')])),
-        PopupMenuItem(value: 'delete', child: Row(children: const [Icon(Icons.delete_outline), SizedBox(width: 12), Text('Delete')])),
+        const PopupMenuItem(
+            value: 'edit',
+            child: Row(children: [
+              Icon(Icons.edit_outlined),
+              SizedBox(width: 12),
+              Text('Edit')
+            ])),
+        const PopupMenuItem(
+            value: 'delete',
+            child: Row(children: [
+              Icon(Icons.delete_outline),
+              SizedBox(width: 12),
+              Text('Delete')
+            ])),
       ],
     );
     if (!mounted) return;
@@ -267,10 +405,18 @@ class _CommentCardState extends State<_CommentCard> {
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('Edit'),
-          content: TextField(controller: controller, autofocus: true, minLines: 1, maxLines: 4),
+          content: TextField(
+              controller: controller,
+              autofocus: true,
+              minLines: 1,
+              maxLines: 4),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Save')),
           ],
         ),
       );
@@ -282,5 +428,3 @@ class _CommentCardState extends State<_CommentCard> {
 
   String _two(int v) => v.toString().padLeft(2, '0');
 }
-
-

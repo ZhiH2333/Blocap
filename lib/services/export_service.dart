@@ -39,7 +39,7 @@ abstract class DirectoryProvider {
 class ExportService {
   final DirectoryProvider _directoryProvider;
   ExportService({DirectoryProvider? directoryProvider})
-      : _directoryProvider = directoryProvider ?? _DefaultDirectoryProvider();
+      : _directoryProvider = directoryProvider ?? const _DefaultDirectoryProvider();
 
   /// 导出笔记为 JSON 文件并返回文件路径与大小
   Future<ExportResult> exportNotesAsJson(
@@ -80,7 +80,7 @@ class ExportService {
     try {
       if (kIsWeb) {
         // Web 平台：无法使用 share_plus 的本地文件分享，退回到读取 bytes 并使用 Share.shareXFiles 不支持 Web，这里抛出并提醒
-        throw ExportException('Web 平台不支持直接分享本地文件，请在客户端下载。');
+        throw const ExportException('Web 平台不支持直接分享本地文件，请在客户端下载。');
       }
       final XFile xfile = XFile(file.path);
       await Share.shareXFiles(<XFile>[xfile],

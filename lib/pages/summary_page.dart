@@ -27,7 +27,9 @@ class _SummaryPageState extends State<SummaryPage> {
   }
 
   void _filterNotesForFocusedYear() {
-    _notesInFocusedYear = widget.notes.where((n) => n.createdAt.year == _focusedDay.year).toList();
+    _notesInFocusedYear = widget.notes
+        .where((n) => n.createdAt.year == _focusedDay.year)
+        .toList();
   }
 
   Map<int, int> _calculateMonthlyNoteCounts() {
@@ -39,7 +41,12 @@ class _SummaryPageState extends State<SummaryPage> {
   }
 
   List<Note> _getNotesForDay(DateTime day) {
-    return widget.notes.where((n) => n.createdAt.year == day.year && n.createdAt.month == day.month && n.createdAt.day == day.day).toList();
+    return widget.notes
+        .where((n) =>
+            n.createdAt.year == day.year &&
+            n.createdAt.month == day.month &&
+            n.createdAt.day == day.day)
+        .toList();
   }
 
   @override
@@ -75,9 +82,16 @@ class _SummaryPageState extends State<SummaryPage> {
         child: Container(
           padding: const EdgeInsets.all(20.0),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainer.withOpacity(0.6),
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainer
+                .withAlpha((0.6 * 255).round()),
             borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(color: Theme.of(context).colorScheme.surfaceContainer.withOpacity(0.2)),
+            border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainer
+                    .withAlpha((0.2 * 255).round())),
           ),
           child: Row(
             children: [
@@ -85,17 +99,19 @@ class _SummaryPageState extends State<SummaryPage> {
                 Text(
                   totalNotesInYear.toString(),
                   style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
                 Text('Notes', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text('This year', style: Theme.of(context).textTheme.bodySmall),
               ]),
               const SizedBox(width: 20),
-              Expanded(child: SizedBox(height: 100, child: _buildBarChart(monthlyCounts))),
+              Expanded(
+                  child: SizedBox(
+                      height: 100, child: _buildBarChart(monthlyCounts))),
             ],
           ),
         ),
@@ -104,7 +120,8 @@ class _SummaryPageState extends State<SummaryPage> {
   }
 
   Widget _buildBarChart(Map<int, int> monthlyCounts) {
-    final maxValue = monthlyCounts.values.fold(0, (max, v) => v > max ? v : max).toDouble();
+    final maxValue =
+        monthlyCounts.values.fold(0, (max, v) => v > max ? v : max).toDouble();
     final primaryColor = Theme.of(context).colorScheme.primary;
     return BarChart(
       BarChartData(
@@ -113,18 +130,35 @@ class _SummaryPageState extends State<SummaryPage> {
         borderData: FlBorderData(show: false),
         alignment: BarChartAlignment.spaceAround,
         titlesData: FlTitlesData(
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 16,
               getTitlesWidget: (value, meta) {
-                const monthInitials = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+                const monthInitials = [
+                  'J',
+                  'F',
+                  'M',
+                  'A',
+                  'M',
+                  'J',
+                  'J',
+                  'A',
+                  'S',
+                  'O',
+                  'N',
+                  'D'
+                ];
                 final idx = value.toInt();
                 if (idx < 1 || idx > 12) return const SizedBox.shrink();
-                return Text(monthInitials[idx - 1], style: Theme.of(context).textTheme.bodySmall);
+                return Text(monthInitials[idx - 1],
+                    style: Theme.of(context).textTheme.bodySmall);
               },
             ),
           ),
@@ -155,9 +189,16 @@ class _SummaryPageState extends State<SummaryPage> {
         child: Container(
           padding: const EdgeInsets.all(8.0),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainer.withOpacity(0.6),
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainer
+                .withAlpha((0.6 * 255).round()),
             borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(color: Theme.of(context).colorScheme.surfaceContainer.withOpacity(0.2)),
+            border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainer
+                    .withAlpha((0.2 * 255).round())),
           ),
           child: TableCalendar<Note>(
             focusedDay: _focusedDay,
@@ -172,7 +213,8 @@ class _SummaryPageState extends State<SummaryPage> {
               });
             },
             headerStyle: HeaderStyle(
-              titleTextFormatter: (date, locale) => DateFormat.yMMMM(locale).format(date),
+              titleTextFormatter: (date, locale) =>
+                  DateFormat.yMMMM(locale).format(date),
               titleTextStyle: Theme.of(context).textTheme.titleMedium!,
               formatButtonVisible: false,
               leftChevronIcon: const Icon(Icons.chevron_left),
@@ -189,7 +231,9 @@ class _SummaryPageState extends State<SummaryPage> {
                       child: Container(
                         width: 6,
                         height: 6,
-                        decoration: BoxDecoration(shape: BoxShape.circle, color: Theme.of(context).colorScheme.primary),
+                        decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Theme.of(context).colorScheme.primary),
                       ),
                     ),
                   );
@@ -203,8 +247,3 @@ class _SummaryPageState extends State<SummaryPage> {
     );
   }
 }
-
-
-
-
-

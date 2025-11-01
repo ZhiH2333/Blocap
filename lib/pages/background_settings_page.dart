@@ -26,7 +26,7 @@ class _BackgroundSettingsPageState extends State<BackgroundSettingsPage> {
               icon: const Icon(Icons.image_outlined),
               label: const Text('Choose image'),
               onPressed: () async {
-                final typeGroup = XTypeGroup(label: 'images', extensions: ['png', 'jpg', 'jpeg', 'webp']);
+                const typeGroup = XTypeGroup(label: 'images', extensions: ['png', 'jpg', 'jpeg', 'webp']);
                 final file = await openFile(acceptedTypeGroups: [typeGroup]);
                 if (file != null) {
                   await storage.saveBackgroundPath(file.path);
@@ -61,6 +61,7 @@ class _BackgroundSettingsPageState extends State<BackgroundSettingsPage> {
     );
   }
 }
+
 
 
 
