@@ -1,3 +1,3 @@
-# capsule
+# Blocap
 
 A new Flutter project.
